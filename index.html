@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <!-- Login Screen -->
+    <div id="login-box" class="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+        <h2 class="text-2xl font-bold text-center text-blue-900 mb-6">Student Portal Login</h2>
+        
+        <div id="error-msg" class="hidden bg-red-100 text-red-700 p-3 rounded mb-4 text-sm text-center"></div>
+
+        <div class="mb-4">
+            <label class="block text-gray-700 font-semibold mb-2">Admission Number</label>
+            <input type="text" id="admNo" value="S12/00101/24" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-gray-700 font-semibold mb-2">Password</label>
+            <input type="password" id="password" value="password123" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <button onclick="login()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">Log In</button>
+    </div>
+
+    <!-- Student Dashboard Screen -->
+    <div id="dashboard" class="hidden bg-white p-8 rounded-xl shadow-md w-full max-w-3xl">
+        <!-- Header -->
+        <div class="border-b pb-4 mb-4 flex justify-between items-center">
+            <div>
+                <h1 id="student-name" class="text-2xl font-bold text-gray-800"></h1>
+                <p id="student-adm" class="text-gray-500 text-sm"></p>
+                <p id="student-course" class="text-blue-600 font-medium text-sm mt-1"></p>
+            </div>
+            <button onclick="logout()" class="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-semibold">Sign Out</button>
+        </div>
+
+        <!-- Fees Cards -->
+        <div class="grid grid-cols-2 gap-4 my-6">
+            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p class="text-xs text-blue-600 uppercase font-bold">Total Fees</p>
+                <p id="total-fees" class="text-xl font-bold text-gray-800 mt-1"></p>
+            </div>
+            <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                <p class="text-xs text-amber-600 uppercase font-bold">Fee Balance</p>
+                <p id="fee-balance" class="text-xl font-bold text-amber-700 mt-1"></p>
+            </div>
+        </div>
+
+        <!-- Academic Results Table -->
+        <div class="mt-8">
+            <h3 class="text-lg font-bold text-gray-800 mb-3">Academic Results (Semester 1)</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse bg-white rounded-lg overflow-hidden border">
+                    <thead>
+                        <tr class="bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th class="p-3 border-b">Unit Code</th>
+                            <th class="p-3 border-b">Unit Name</th>
+                            <th class="p-3 border-b text-center">CAT (/30)</th>
+                            <th class="p-3 border-b text-center">Exam (/70)</th>
+                            <th class="p-3 border-b text-center">Total</th>
+                            <th class="p-3 border-b text-center">Grade</th>
+                            <th class="p-3 border-b text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-table-body" class="divide-y divide-gray-200 text-sm">
+                        <!-- Dynamic rows loaded via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function login() {
+            const adm = document.getElementById('admNo').value;
+            const pass = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error-msg');
+
+            errorDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/student/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admission_number: adm, password: pass })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Login failed');
+                }
+
+                const data = await response.json();
+
+                // Fill profile info
+                document.getElementById('student-name').innerText = data.full_name;
+                document.getElementById('student-adm').innerText = "Adm: " + data.admission_number;
+                document.getElementById('student-course').innerText = data.course;
+                document.getElementById('total-fees').innerText = "KSh " + data.fee_structure_total.toLocaleString();
+                document.getElementById('fee-balance').innerText = "KSh " + data.fee_balance.toLocaleString();
+
+                // Populate Results Table
+                const tbody = document.getElementById('results-table-body');
+                tbody.innerHTML = '';
+
+                data.results.forEach(res => {
+                    const row = document.createElement('tr');
+                    
+                    const badge = res.is_retake 
+                        ? `<span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded font-bold">RETAKE</span>`
+                        : `<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded font-bold">PASS</span>`;
+
+                    row.innerHTML = `
+                        <td class="p-3 font-semibold text-gray-700">${res.unit_code}</td>
+                        <td class="p-3 text-gray-600">${res.unit_name}</td>
+                        <td class="p-3 text-center text-gray-600">${res.cat_score}</td>
+                        <td class="p-3 text-center text-gray-600">${res.exam_score}</td>
+                        <td class="p-3 text-center font-bold text-gray-800">${res.total_score}</td>
+                        <td class="p-3 text-center font-bold ${res.is_retake ? 'text-red-600' : 'text-blue-600'}">${res.grade}</td>
+                        <td class="p-3 text-center">${badge}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Display Dashboard
+                document.getElementById('login-box').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+
+            } catch (err) {
+                errorDiv.innerText = err.message;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('login-box').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
