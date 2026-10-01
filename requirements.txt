@@ -1,3 +1,7 @@
+uvicorn
+gunicorn
 fastapi
 uvicorn
 jinja2
+pandas
+sqlalchemy
