@@ -167,3 +167,6 @@ async def upload_results(file: UploadFile = File(...), db: Session = Depends(get
 
     db.commit()
     return {"status": "success", "message": f"Successfully processed {processed_count} result records."}
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Student Portal API!"}
